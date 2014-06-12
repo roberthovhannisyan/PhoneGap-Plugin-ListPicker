@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plugin xmlns="http://apache.org/cordova/ns/plugins/1.0"
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        id="am.armsoft.plugins.listpicker"
+        version="2.0">
+
+  <name>ListPicker</name>
+
+  <description>
+  	PhoneGap plugin to display a list picker dialog for Android and iOS.
+  </description>
+
+  <license>MIT</license>
+  <keywords>phonegap,android,ios,list,picker,dialog</keywords>
+
+  <engines>
+    <engine name="cordova" version=">=3.0.0"/>
+  </engines>
+
+  <js-module src="www/ListPicker.js" name="ListPicker">
+    <clobbers target="window.plugins.listpicker" />
+  </js-module>
+
+  <!-- ios -->
+  <platform name="ios">
+
+    <config-file target="config.xml" parent="/*">
+      <feature name="ListPicker">
+        <param name="ios-package" value="ListPicker"/>
+      </feature>
+    </config-file>
+
+    <header-file src="src/ios/ListPicker.h"/>
+    <source-file src="src/ios/ListPicker.m"/>
+  </platform>
+
+  <!-- android -->
+  <platform name="android">
+
+    <config-file target="res/xml/config.xml" parent="/*">
+      <feature name="ListPicker">
+        <param name="android-package" value="am.armsoft.plugins.listpicker" />
+      </feature>
+    </config-file>
+
+    <source-file src="src/android/am/armsoft/plugins/ListPicker.java" target-dir="src/am/armsoft/plugins" />
+  </platform>
+</plugin>
