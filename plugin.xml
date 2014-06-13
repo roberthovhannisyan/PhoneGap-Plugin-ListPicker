@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <plugin xmlns="http://apache.org/cordova/ns/plugins/1.0"
         xmlns:android="http://schemas.android.com/apk/res/android"
-        id="am.armsoft.plugins.listpicker"
+        id="am.armsoft.plugins.ListPicker"
         version="2.0">
 
   <name>ListPicker</name>
@@ -39,7 +39,7 @@
 
     <config-file target="res/xml/config.xml" parent="/*">
       <feature name="ListPicker">
-        <param name="android-package" value="am.armsoft.plugins.listpicker" />
+        <param name="android-package" value="am.armsoft.plugins.ListPicker" />
       </feature>
     </config-file>
 
