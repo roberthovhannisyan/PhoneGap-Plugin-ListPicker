@@ -1,8 +1,9 @@
-package org.apache.cordova.plugins;
+package am.armsoft.plugins;
 
 import java.util.ArrayList;
 import java.util.List;
 
+import org.json.JSONObject;
 import org.json.JSONArray;
 import org.json.JSONException;
 
@@ -17,14 +18,14 @@ import org.apache.cordova.PluginResult;
 /**
  * This class provides a service.
  */
-public class ListPickerPlugin extends CordovaPlugin {
+public class ListPicker extends CordovaPlugin {
 
     private final String PluginName = "ListPicker";
 
     /**
      * Constructor.
      */
-    public ListPickerPlugin() {
+    public ListPicker() {
     }
 
     /**
@@ -36,33 +37,36 @@ public class ListPickerPlugin extends CordovaPlugin {
      * @return              A PluginResult object with a status and message.
      */
     @Override
-    public boolean execute(String action, JSONArray args, CallbackContext callbackContext) throws JSONException {
+    public boolean execute(String action, JSONArray args, final CallbackContext callbackContext) throws JSONException {
             if (action.equals("showPicker")) {
                 this.showPicker(args, callbackContext);
+                return true;
             }
-            return true;
+            return false;
         }
 
     // --------------------------------------------------------------------------
     // LOCAL METHODS
     // --------------------------------------------------------------------------
     
-    public void showPicker(final JSONArray data, final CallbackContext callbackContext) {
+    public void showPicker(final JSONArray data, final CallbackContext callbackContext) throws JSONException {
     
         final CordovaInterface cordova = this.cordova;
 
-        JSONObject options = data.getJSONObject(1);
+        
+        
+        final JSONObject options = data.getJSONObject(0);
 				
 				final String title = options.getString("title");
-        JSONArray items = options.getJSONArray("items");
+        final JSONArray items = options.getJSONArray("items");
                 
         // Get the texts to display
         List<String> list = new ArrayList<String>();
         for(int i = 0; i < items.length(); i++) {
         		JSONObject item = items.getJSONObject(i);
-						list.add(items.getString("text"));
+						list.add(item.getString("text"));
 		   	}
-		   	CharSequence[] texts = list.toArray(new CharSequence[list.size()]);
+		   	final CharSequence[] texts = list.toArray(new CharSequence[list.size()]);
 		   	
 		   	// Create and show the alert dialog
 		   	Runnable runnable = new Runnable() {
@@ -72,14 +76,17 @@ public class ListPickerPlugin extends CordovaPlugin {
 	            	// Set dialog properties
 	            	builder.setTitle(title);
 	            	builder.setCancelable(true);
-	            	builder.setItems(items, new DialogInterface.OnClickListener() {
+	            	builder.setItems(texts, new DialogInterface.OnClickListener() {
 		    	    			public void onClick(DialogInterface dialog, int index) {
 		    	    				
-		    	    				JSONObject selectedItem = items.getJSONObject(index);
-		    	    				final String selectedValue = selectedItem.getString("value");
+		    	    				try {
+		    	    						final JSONObject selectedItem = items.getJSONObject(index);
+		    	    						final String selectedValue = selectedItem.getString("value");
+		    	    						dialog.dismiss();
+													callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.OK, selectedValue));
+		    	    				}
+		    	    				catch (JSONException e) {}
 		    	    				
-		    	    				dialog.dismiss();
-											callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.OK, selectedValue));
                   	}
                 });
                 
@@ -88,7 +95,7 @@ public class ListPickerPlugin extends CordovaPlugin {
 			    			alert.getWindow().getAttributes().windowAnimations = android.R.style.Animation_Dialog;
 			    			alert.show(); 
 		    		}
-		   	}
+		   	};
 		   	this.cordova.getActivity().runOnUiThread(runnable);
     }
 
