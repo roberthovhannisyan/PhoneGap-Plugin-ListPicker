@@ -10,22 +10,22 @@ var exec = require('cordova/exec');
 var ListPicker = function() {}
 
 ListPicker.prototype.showPicker = function(options, callback) {
-		options || (options = {});
-		var scope = options.scope || null;
-		
-		var config = {
-				title: options.title || ' ',
-				items: options.items || {},
-				style: options.style || 'default',
-				doneButtonLabel: options.doneButtonLabel || 'Done',
-				cancelButtonLabel: options.cancelButtonLabel || 'Cancel'
-		};
-		
-		var _callback = function() {
-				if(typeof callback == 'function') { 
-					callback.apply(scope, arguments);
-				}
-		};
-		cordova.exec(_callback, null, 'ListPicker', 'showPicker', [config]);
+    options || (options = {});
+    var scope = options.scope || null;
+    
+    var config = {
+        title: options.title || ' ',
+        items: options.items || {},
+        style: options.style || 'default',
+        doneButtonLabel: options.doneButtonLabel || 'Done',
+        cancelButtonLabel: options.cancelButtonLabel || 'Cancel'
+    };
+    
+    var _callback = function() {
+        if(typeof callback == 'function') { 
+          callback.apply(scope, arguments);
+        }
+    };
+    cordova.exec(_callback, null, 'ListPicker', 'showPicker', [config]);
 }
 module.exports = new ListPicker();

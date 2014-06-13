@@ -20,8 +20,6 @@ import org.apache.cordova.PluginResult;
  */
 public class ListPicker extends CordovaPlugin {
 
-    private final String PluginName = "ListPicker";
-
     /**
      * Constructor.
      */
@@ -38,12 +36,12 @@ public class ListPicker extends CordovaPlugin {
      */
     @Override
     public boolean execute(String action, JSONArray args, final CallbackContext callbackContext) throws JSONException {
-            if (action.equals("showPicker")) {
-                this.showPicker(args, callbackContext);
-                return true;
-            }
-            return false;
+        if (action.equals("showPicker")) {
+            this.showPicker(args, callbackContext);
+            return true;
         }
+        return false;
+    }
 
     // --------------------------------------------------------------------------
     // LOCAL METHODS
@@ -52,51 +50,48 @@ public class ListPicker extends CordovaPlugin {
     public void showPicker(final JSONArray data, final CallbackContext callbackContext) throws JSONException {
     
         final CordovaInterface cordova = this.cordova;
-
-        
         
         final JSONObject options = data.getJSONObject(0);
-				
-				final String title = options.getString("title");
+        final String title = options.getString("title");
         final JSONArray items = options.getJSONArray("items");
                 
         // Get the texts to display
         List<String> list = new ArrayList<String>();
         for(int i = 0; i < items.length(); i++) {
-        		JSONObject item = items.getJSONObject(i);
-						list.add(item.getString("text"));
-		   	}
-		   	final CharSequence[] texts = list.toArray(new CharSequence[list.size()]);
-		   	
-		   	// Create and show the alert dialog
-		   	Runnable runnable = new Runnable() {
+            JSONObject item = items.getJSONObject(i);
+            list.add(item.getString("text"));
+        }
+        final CharSequence[] texts = list.toArray(new CharSequence[list.size()]);
+        
+        // Create and show the alert dialog
+        Runnable runnable = new Runnable() {
             public void run() {
-	            	AlertDialog.Builder builder = new AlertDialog.Builder(cordova.getActivity());
-	            	
-	            	// Set dialog properties
-	            	builder.setTitle(title);
-	            	builder.setCancelable(true);
-	            	builder.setItems(texts, new DialogInterface.OnClickListener() {
-		    	    			public void onClick(DialogInterface dialog, int index) {
-		    	    				
-		    	    				try {
-		    	    						final JSONObject selectedItem = items.getJSONObject(index);
-		    	    						final String selectedValue = selectedItem.getString("value");
-		    	    						dialog.dismiss();
-													callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.OK, selectedValue));
-		    	    				}
-		    	    				catch (JSONException e) {}
-		    	    				
-                  	}
+                AlertDialog.Builder builder = new AlertDialog.Builder(cordova.getActivity());
+                
+                // Set dialog properties
+                builder.setTitle(title);
+                builder.setCancelable(true);
+                builder.setItems(texts, new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int index) {
+                        try {
+                            final JSONObject selectedItem = items.getJSONObject(index);
+                            final String selectedValue = selectedItem.getString("value");
+                            dialog.dismiss();
+                            callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.OK, selectedValue));
+                        }
+                        catch (JSONException e) {
+                            callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.JSON_EXCEPTION));
+                        }
+                    }
                 });
                 
                 // Show alert dialog
-	            	AlertDialog alert = builder.create();
-			    			alert.getWindow().getAttributes().windowAnimations = android.R.style.Animation_Dialog;
-			    			alert.show(); 
-		    		}
-		   	};
-		   	this.cordova.getActivity().runOnUiThread(runnable);
+                AlertDialog alert = builder.create();
+                alert.getWindow().getAttributes().windowAnimations = android.R.style.Animation_Dialog;
+                alert.show(); 
+            }
+        };
+        this.cordova.getActivity().runOnUiThread(runnable);
     }
 
 }
