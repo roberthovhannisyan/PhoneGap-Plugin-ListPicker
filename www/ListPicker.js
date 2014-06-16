@@ -15,6 +15,7 @@ ListPicker.prototype.showPicker = function(options, callback) {
     
     var config = {
         title: options.title || ' ',
+        selectedValue: options.selectedValue || '',
         items: options.items || {},
         style: options.style || 'default',
         doneButtonLabel: options.doneButtonLabel || 'Done',

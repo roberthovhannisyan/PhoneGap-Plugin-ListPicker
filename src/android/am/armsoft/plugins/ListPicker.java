@@ -53,15 +53,22 @@ public class ListPicker extends CordovaPlugin {
         
         final JSONObject options = data.getJSONObject(0);
         final String title = options.getString("title");
+        final String selectedValue = options.getString("selectedValue");
         final JSONArray items = options.getJSONArray("items");
+        
                 
         // Get the texts to display
+        int index = -1;
         List<String> list = new ArrayList<String>();
         for(int i = 0; i < items.length(); i++) {
             JSONObject item = items.getJSONObject(i);
             list.add(item.getString("text"));
+            if (selectedValue.equals(item.getString("value"))) {
+              index = i;
+            }
         }
         final CharSequence[] texts = list.toArray(new CharSequence[list.size()]);
+        final int selectedIndex = index;
         
         // Create and show the alert dialog
         Runnable runnable = new Runnable() {
@@ -71,7 +78,7 @@ public class ListPicker extends CordovaPlugin {
                 // Set dialog properties
                 builder.setTitle(title);
                 builder.setCancelable(true);
-                builder.setItems(texts, new DialogInterface.OnClickListener() {
+                builder.setSingleChoiceItems(texts, selectedIndex, new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int index) {
                         try {
                             final JSONObject selectedItem = items.getJSONObject(index);
