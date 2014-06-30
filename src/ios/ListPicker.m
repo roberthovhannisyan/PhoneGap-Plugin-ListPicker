@@ -1,7 +1,7 @@
-#import "PickerView.h"
+#import "ListPicker.h"
 #import <Cordova/CDVDebug.h>
 
-@implementation PickerView
+@implementation ListPicker
 
 @synthesize callbackId = _callbackId;
 @synthesize pickerView = _pickerView;
