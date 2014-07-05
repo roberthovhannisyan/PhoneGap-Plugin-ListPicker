@@ -31,8 +31,8 @@ Usage:
 Screen Shots: 
 
 ![ListPickerAndroid](screenshots/android.png "ListPickerAndroid")
-![ListPickeriPhone](screenshots/iphone.png "ListPickeriPhone")
-![ListPickeriPad](screenshots/ipad.png "ListPickeriPad")
+![ListPickeriPhone](screenshots/iphone1.png "ListPickeriPhone")
+![ListPickeriPad](screenshots/ipad1.png "ListPickeriPad")
 
 Licence:
 
