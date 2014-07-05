@@ -1,6 +1,11 @@
 #import "ListPicker.h"
 #import <Cordova/CDVDebug.h>
 
+BOOL isOSAtLeast(NSString* version) {
+    return [[[UIDevice currentDevice] systemVersion] compare:version options:NSNumericSearch] != NSOrderedAscending;
+}
+
+
 @implementation ListPicker
 
 @synthesize callbackId = _callbackId;
@@ -22,131 +27,130 @@
 
 - (void)showPicker:(CDVInvokedUrlCommand*)command {
 
-  self.callbackId = command.callbackId;
-  NSDictionary *options = [command.arguments objectAtIndex:0];
+    self.callbackId = command.callbackId;
+    NSDictionary *options = [command.arguments objectAtIndex:0];
   
-  // Compiling options with defaults
-  NSString *title = [options objectForKey:@"title"] ?: @" ";
-  NSString *style = [options objectForKey:@"style"] ?: @"default";
-  NSString *doneButtonLabel = [options objectForKey:@"doneButtonLabel"] ?: @"Done";
-  NSString *cancelButtonLabel = [options objectForKey:@"cancelButtonLabel"] ?: @"Cancel";
+    // Compiling options with defaults
+    NSString *title = [options objectForKey:@"title"] ?: @" ";
+    NSString *doneButtonLabel = [options objectForKey:@"doneButtonLabel"] ?: @"Done";
+    NSString *cancelButtonLabel = [options objectForKey:@"cancelButtonLabel"] ?: @"Cancel";
 
-  // Hold items in an instance variable
-  self.items = [options objectForKey:@"items"];
+    // Hold items in an instance variable
+    self.items = [options objectForKey:@"items"];
 
-  // Initialize PickerView
-  self.pickerView = [[UIPickerView alloc] initWithFrame:CGRectMake(0, 40.0f, 320.0f, 162.0f)];
-  self.pickerView.showsSelectionIndicator = YES;
-  self.pickerView.delegate = self;
+    // Initialize the toolbar with Cancel and Done buttons and title
+    UIToolbar *toolbar = [[UIToolbar alloc] initWithFrame: CGRectMake(0, 0, self.viewSize.width, 44)];
+    toolbar.barStyle = isOSAtLeast(@"7.0") ? UIBarStyleDefault : UIBarStyleBlackTranslucent;
+    NSMutableArray *buttons =[[NSMutableArray alloc] init];
+    
+    // Create Cancel button
+    UIBarButtonItem *cancelButton = [[UIBarButtonItem alloc]initWithTitle:cancelButtonLabel style:UIBarButtonItemStylePlain target:self action:@selector(didDismissWithCancelButton:)];
+    [buttons addObject:cancelButton];
+    
+    // Create title label aligned to center and appropriate spacers
+    UIBarButtonItem *flexSpace = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFlexibleSpace target:nil action:nil];
+    [buttons addObject:flexSpace];
+    UILabel *label =[[UILabel alloc] initWithFrame:CGRectMake(0, 0, 180, 30)];
+    [label setTextAlignment:NSTextAlignmentCenter];
+    [label setTextColor: isOSAtLeast(@"7.0") ? [UIColor blackColor] : [UIColor whiteColor]];
+    [label setFont: [UIFont boldSystemFontOfSize:16]];
+    [label setBackgroundColor:[UIColor clearColor]];
+     label.text = title;
+     UIBarButtonItem *labelButton = [[UIBarButtonItem alloc] initWithCustomView:label];
+    [buttons addObject:labelButton];
+    [buttons addObject:flexSpace];
+     
+     // Create Done button
+    UIBarButtonItem *doneButton = [[UIBarButtonItem alloc] initWithTitle:doneButtonLabel style:UIBarButtonItemStyleDone target:self action:@selector(didDismissWithDoneButton:)];
+     [buttons addObject:doneButton];
+     [toolbar setItems:buttons animated:YES];
+     
+    // Initialize the picker
+    self.pickerView = [[UIPickerView alloc] initWithFrame:CGRectMake(0, 40.0f, self.viewSize.width, 216)];
+    self.pickerView.showsSelectionIndicator = YES;
+    self.pickerView.delegate = self;
 
-  // Define selected value
-  if([options objectForKey:@"selectedValue"]) {
-    int i = [self getRowWithValue:[options objectForKey:@"selectedValue"]];
-    if (i != -1) [self.pickerView selectRow:i inComponent:0 animated:NO];
-  }
+    // Define selected value
+    if([options objectForKey:@"selectedValue"]) {
+        int i = [self getRowWithValue:[options objectForKey:@"selectedValue"]];
+        if (i != -1) [self.pickerView selectRow:i inComponent:0 animated:NO];
+    }
+   
+    // Initialize the View that should conain the toolbar and picker
+    UIView *view = [[UIView alloc] initWithFrame:CGRectMake(0, 0, self.viewSize.width, 260)];
+    [view addSubview: toolbar];
+    [view addSubview:self.pickerView];
   
-  // Check if device is iPad as we won't be able to use an ActionSheet there
-  if ([[UIDevice currentDevice] userInterfaceIdiom] == UIUserInterfaceIdiomPad) {
-    return [self createForIpad:command];
-  }
-
-  // Create actionSheet
-  self.actionSheet = [[UIActionSheet alloc] 
-    initWithTitle:title
-    delegate:self
-    cancelButtonTitle:nil
-    destructiveButtonTitle:nil
-    otherButtonTitles:nil];
-
-  // Style actionSheet, defaults to UIActionSheetStyleDefault
-  if([style isEqualToString:@"black-opaque"]) self.actionSheet.actionSheetStyle = UIActionSheetStyleBlackOpaque;
-  else if([style isEqualToString:@"black-translucent"]) self.actionSheet.actionSheetStyle = UIActionSheetStyleBlackTranslucent;
-  else self.actionSheet.actionSheetStyle = UIActionSheetStyleDefault;
-
-  // Append pickerView
-  [self.actionSheet addSubview:self.pickerView];
+    // Check if device is iPad as we won't be able to use an ActionSheet there
+    if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) {
+        return [self presentPopoverForView:view];
+    } else {
+        return [self presentActionSheetForView:view];
+    }
+}
+     
+-(void)presentActionSheetForView:(UIView *)view {
+    
+    // Calculate actionSheet height
+    NSString *paddedSheetTitle = nil;
+    CGFloat sheetHeight = self.viewSize.height - 47;
+    if([self isViewPortrait]) {
+        paddedSheetTitle = @"\n\n\n"; // Looks hacky
+    } else {
+        if(isOSAtLeast(@"5.0")) {
+            sheetHeight = self.viewSize.width;
+        } else {
+            sheetHeight += 103;
+        }
+    }
+    
+    // ios7 picker draws a darkened alpha-only region on the first and last 8 pixels horizontally, but blurs the rest of its background. To make it whole popup appear to be edge-to-edge, we have to add blurring to the remaining left and right edges.
+    if(isOSAtLeast(@"7.0")) {
+        CGRect f = CGRectMake(0, self.pickerView.frame.origin.y, 8, self.pickerView.frame.size.height);
+        UIToolbar* leftEdge = [[UIToolbar alloc]initWithFrame: f];
+        f.origin.x = view.frame.size.width - 8;
+        UIToolbar* rightEdge = [[UIToolbar alloc]initWithFrame: f];
+        [view insertSubview: leftEdge atIndex: 0];
+        [view insertSubview: rightEdge atIndex: 0];
+    }
+    
+    // Create and style actionSheet, and append the view to it
+    self.actionSheet = [[UIActionSheet alloc] initWithTitle:paddedSheetTitle delegate:self cancelButtonTitle:nil destructiveButtonTitle:nil otherButtonTitles:nil];
+    [self.actionSheet setActionSheetStyle:UIActionSheetStyleBlackTranslucent];
+    [self.actionSheet addSubview:view];
   
-  // Create segemented cancel button
-  UISegmentedControl *cancelButton = [[UISegmentedControl alloc] initWithItems:[NSArray arrayWithObject:cancelButtonLabel]];
-  cancelButton.momentary = YES;
-  cancelButton.frame = CGRectMake(5.0f, 7.0f, 50.0f, 30.0f);
-  cancelButton.segmentedControlStyle = UISegmentedControlStyleBar;
-  cancelButton.tintColor = [UIColor blackColor];
-  [cancelButton addTarget:self action:@selector(segmentedControl:didDismissWithCancelButton:) forControlEvents:UIControlEventValueChanged];
-  // Append close button
-  [self.actionSheet addSubview:cancelButton];
+    // Toggle ActionSheet
+    [self.actionSheet showInView:self.webView.superview];
 
-  // Create segemented done button
-  UISegmentedControl *doneButton = [[UISegmentedControl alloc] initWithItems:[NSArray arrayWithObject:doneButtonLabel]];
-  doneButton.momentary = YES;
-  doneButton.frame = CGRectMake(265.0f, 7.0f, 50.0f, 30.0f);
-  doneButton.segmentedControlStyle = UISegmentedControlStyleBar;
-  doneButton.tintColor = [UIColor colorWithRed:51.0f/255.0f green:102.0f/255.0f blue:153.0f/255.0f alpha:1.0f];
-  [doneButton addTarget:self action:@selector(segmentedControl:didDismissWithDoneButton:) forControlEvents:UIControlEventValueChanged];
-  // Append done button
-  [self.actionSheet addSubview:doneButton];
-  
-  // Toggle ActionSheet
-  [self.actionSheet showInView:self.webView.superview];
-
-  // Resize actionSheet was 360
-  float actionSheetHeight;
-  int systemMajorVersion = [[[[UIDevice currentDevice].systemVersion componentsSeparatedByString:@"."] objectAtIndex:0] integerValue];
-  if(systemMajorVersion >= 5) {
-    actionSheetHeight = 360.0f;
-  } else {
-    actionSheetHeight = 472.0f;
-  }
-  [self.actionSheet setBounds:CGRectMake(0, 0, 320.0f, actionSheetHeight)];
+    // Use beginAnimations for a smoother popup animation, otherwise the UIActionSheet pops into view
+    [UIView beginAnimations:nil context:nil];
+    [self.actionSheet setBounds:CGRectMake(0, 0, self.viewSize.width, sheetHeight)];
+    [UIView commitAnimations];
 }
 
--(void)createForIpad:(CDVInvokedUrlCommand*)command {
+-(void)presentPopoverForView:(UIView *)view {
 
-  NSString *doneButtonLabel = [options objectForKey:@"doneButtonLabel"] ?: @"Done";
-  
-  // Create a generic content view controller
-  UINavigationController* popoverContent = [[UINavigationController alloc] init];
+    // Create a generic content view controller
+    UIViewController* popoverContent = [[UIViewController alloc] initWithNibName:nil bundle:nil];
+    popoverContent.view = view;
 
-  // Create a generic container view
-  UIView* popoverView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, 320.0f, 162.0f)];
-  popoverContent.view = popoverView;
+    // Resize the popover view shown
+    // in the current view to the view's size
+    popoverContent.contentSizeForViewInPopover = view.frame.size;
 
-  // Append pickerView
-  [popoverView addSubview:self.pickerView];
-  
-  // Create segemented done button
-  UISegmentedControl *doneButton = [[UISegmentedControl alloc] initWithItems:[NSArray arrayWithObject:doneButtonLabel]];
-  doneButton.momentary = YES;
-  doneButton.frame = CGRectMake(265.0f, 7.0f, 50.0f, 30.0f);
-  doneButton.segmentedControlStyle = UISegmentedControlStyleBar;
-  doneButton.tintColor = [UIColor colorWithRed:51.0f/255.0f green:102.0f/255.0f blue:153.0f/255.0f alpha:1.0f];
-  [doneButton addTarget:self action:@selector(segmentedControl:didDismissWithDoneButton:) forControlEvents:UIControlEventValueChanged];
-  // Append done button
-  [popoverView addSubview:doneButton];
+    // Create a popover controller
+    self.popoverController = [[UIPopoverController alloc] initWithContentViewController:popoverContent];
+    self.popoverController.delegate = self;
+    
+    // display the picker at the center of the view
+    CGRect sourceRect = CGRectMake(self.webView.superview.center.x, self.webView.superview.center.y, 1, 1);
 
-  // Resize the popover view shown
-  // in the current view to the view's size
-  popoverContent.contentSizeForViewInPopover = CGSizeMake(320.0f, 162.0f);
-
-  // Create a popover controller
-  self.popoverController = [[UIPopoverController alloc] initWithContentViewController:popoverContent];
-  self.popoverController.delegate = self;
-
-  CGRect sourceRect = CGRectNull;
-  UIDeviceOrientation curDevOrientation = [[UIApplication sharedApplication] statusBarOrientation];
-  if(UIDeviceOrientationIsLandscape(curDevOrientation)) {
-    // 1024-20 / 2 & 768 - 10
-    sourceRect = CGRectMake(502.0f, 758.0f, 20.0f, 20.0f);
-  } else {
-    sourceRect = CGRectMake(374.0f, 1014.0f, 20.0f, 20.0f);
-  }
-
-  //present the popover view non-modal with a
-  //refrence to the button pressed within the current view
-  [self.popoverController presentPopoverFromRect:sourceRect
-      inView:self.webView.superview
-      permittedArrowDirections:@"any"
-      animated:YES];
+    //present the popover view non-modal with a
+    //refrence to the button pressed within the current view
+    [self.popoverController presentPopoverFromRect:sourceRect
+                                            inView:self.webView.superview
+                          permittedArrowDirections: 0
+                                          animated:YES];
 
 }
 
@@ -154,11 +158,11 @@
 // Dismiss methods
 //
 
-// Picker with segmentedControls dismissed with done
-- (void)segmentedControl:(UISegmentedControl *)segmentedControl didDismissWithDoneButton:(NSInteger)buttonIndex {
+// Picker with toolbar dismissed with done
+- (IBAction)didDismissWithDoneButton:(id)sender {
 
   // Check if device is iPad
-  if ([[UIDevice currentDevice] userInterfaceIdiom] == UIUserInterfaceIdiomPad) {
+  if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) {
     // Emulate a new delegate method
     [self popoverController:self.popoverController dismissWithClickedButtonIndex:1 animated:YES];
   } else {
@@ -166,11 +170,11 @@
   }
 }
 
-// Picker with segmentedControls dismissed with cancel
-- (void)segmentedControl:(UISegmentedControl *)segmentedControl didDismissWithCancelButton:(NSInteger)buttonIndex {
+// Picker with toolbar dismissed with cancel
+- (IBAction)didDismissWithCancelButton:(id)sender {
 
   // Check if device is iPad
-  if ([[UIDevice currentDevice] userInterfaceIdiom] == UIUserInterfaceIdiomPad) {
+  if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) {
     // Emulate a new delegate method
     [self popoverController:self.popoverController dismissWithClickedButtonIndex:0 animated:YES];
   } else {
@@ -218,10 +222,10 @@
   // Checking if cancel was clicked
   if (buttonIndex == 0) {
     // Call the Failure Javascript function
-    [self writeJavascript: [pluginResult toErrorCallbackString:[self.callbackId]];
+    [self writeJavascript: [pluginResult toErrorCallbackString:self.callbackId]];
   }else {
     // Call the Success Javascript function
-    [self writeJavascript: [pluginResult toSuccessCallbackString:[self.callbackId]];
+    [self writeJavascript: [pluginResult toSuccessCallbackString:self.callbackId]];
   }
 
 }
@@ -252,7 +256,21 @@
 
 // Tell the picker the width of each row for a given component
 - (CGFloat)pickerView:(UIPickerView *)pickerView widthForComponent:(NSInteger)component {
-  return 300.0f;
+  return pickerView.frame.size.width - 30;
+}
+
+//
+// Utilities
+//
+
+- (CGSize) viewSize {
+    if (![self isViewPortrait])
+        return CGSizeMake(480, 320);
+    return CGSizeMake(320, 480);
+}
+
+- (BOOL) isViewPortrait {
+    return UIInterfaceOrientationIsPortrait([UIApplication sharedApplication].statusBarOrientation);
 }
 
 @end
