@@ -10,6 +10,7 @@
 @property (nonatomic, strong) UIPickerView *pickerView;
 @property (nonatomic, strong) UIActionSheet *actionSheet;
 @property (nonatomic, strong) UIPopoverController *popoverController;
+@property (nonatomic, strong) UIView *modalView;
 @property (nonatomic, strong) NSArray *items;
 
 #pragma mark - Instance methods

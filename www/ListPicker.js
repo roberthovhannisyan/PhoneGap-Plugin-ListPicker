@@ -9,7 +9,7 @@ var exec = require('cordova/exec');
 
 var ListPicker = function() {}
 
-ListPicker.prototype.showPicker = function(options, callback) {
+ListPicker.prototype.showPicker = function(options, callback, error_callback) {
     options || (options = {});
     var scope = options.scope || null;
     
@@ -27,6 +27,12 @@ ListPicker.prototype.showPicker = function(options, callback) {
           callback.apply(scope, arguments);
         }
     };
-    cordova.exec(_callback, null, 'ListPicker', 'showPicker', [config]);
+    
+    var _error_callback = function() {
+        if(typeof error_callback == 'function') { 
+          error_callback.apply(scope, arguments);
+        }
+    };
+    cordova.exec(_callback, _error_callback, 'ListPicker', 'showPicker', [config]);
 }
 module.exports = new ListPicker();

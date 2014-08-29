@@ -12,6 +12,7 @@ BOOL isOSAtLeast(NSString* version) {
 @synthesize pickerView = _pickerView;
 @synthesize actionSheet = _actionSheet;
 @synthesize popoverController = _popoverController;
+@synthesize modalView = _modalView;
 @synthesize items = _items;
 
 
@@ -78,6 +79,9 @@ BOOL isOSAtLeast(NSString* version) {
    
     // Initialize the View that should conain the toolbar and picker
     UIView *view = [[UIView alloc] initWithFrame:CGRectMake(0, 0, self.viewSize.width, 260)];
+    if(isOSAtLeast(@"7.0")) {
+      [view setBackgroundColor:[UIColor colorWithRed:0.97 green:0.97 blue:0.97 alpha:1.0]];
+    }
     [view addSubview: toolbar];
     [view addSubview:self.pickerView];
   
@@ -85,10 +89,39 @@ BOOL isOSAtLeast(NSString* version) {
     if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) {
         return [self presentPopoverForView:view];
     } else {
-        return [self presentActionSheetForView:view];
+        if (isOSAtLeast(@"8.0"))  {
+            return [self presentModalViewForView:view];
+        } else {
+            return [self presentActionSheetForView:view];
+        }
     }
 }
      
+-(void)presentModalViewForView:(UIView *)view {
+
+    CGRect viewFrame = self.viewController.view.frame;
+    [view setFrame: CGRectMake(0, viewFrame.size.height, self.viewSize.width, 260)];
+    
+    // Create the modal view to display
+    self.modalView = [[UIView alloc] initWithFrame:viewFrame];
+    [self.modalView setBackgroundColor:[UIColor clearColor]];
+    [self.modalView addSubview: view];
+    
+    // Add the modal view to current controller
+    [self.viewController.view addSubview:self.modalView];
+    [self.viewController.view bringSubviewToFront:self.modalView];
+    
+    //Present the view animated
+    [UIView animateWithDuration:0.5
+                          delay:0.0
+                        options: 0
+                     animations:^{
+                         [self.modalView.subviews[0] setFrame: CGRectOffset(viewFrame, 0, viewFrame.size.height-260)];;
+                         [self.modalView setBackgroundColor:[UIColor colorWithWhite:0.0 alpha:0.5]];
+                     }
+                     completion:nil];
+}
+
 -(void)presentActionSheetForView:(UIView *)view {
     
     // Calculate actionSheet height
@@ -161,25 +194,33 @@ BOOL isOSAtLeast(NSString* version) {
 // Picker with toolbar dismissed with done
 - (IBAction)didDismissWithDoneButton:(id)sender {
 
-  // Check if device is iPad
-  if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) {
-    // Emulate a new delegate method
-    [self popoverController:self.popoverController dismissWithClickedButtonIndex:1 animated:YES];
-  } else {
-    [self.actionSheet dismissWithClickedButtonIndex:1 animated:YES];
-  }
+    // Check if device is iPad
+    if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) {
+        // Emulate a new delegate method
+        [self dismissPopoverController:self.popoverController withButtonIndex:0 animated:YES];
+    } else {
+        if (isOSAtLeast(@"8.0"))  {
+            [self dismissModalView:self.modalView withButtonIndex:1 animated:YES];
+        } else {
+            [self.actionSheet dismissWithClickedButtonIndex:1 animated:YES];
+        }
+    }
 }
 
 // Picker with toolbar dismissed with cancel
 - (IBAction)didDismissWithCancelButton:(id)sender {
 
-  // Check if device is iPad
-  if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) {
-    // Emulate a new delegate method
-    [self popoverController:self.popoverController dismissWithClickedButtonIndex:0 animated:YES];
-  } else {
-    [self.actionSheet dismissWithClickedButtonIndex:0 animated:YES];
-  }
+    // Check if device is iPad
+    if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) {
+        // Emulate a new delegate method
+        [self dismissPopoverController:self.popoverController withButtonIndex:0 animated:YES];
+    } else {
+        if (isOSAtLeast(@"8.0"))  {
+            [self dismissModalView:self.modalView withButtonIndex:0 animated:YES];
+        } else {
+            [self.actionSheet dismissWithClickedButtonIndex:0 animated:YES];
+        }
+    }
 }
 
 // Popover generic dismiss - iPad
@@ -190,7 +231,7 @@ BOOL isOSAtLeast(NSString* version) {
 }
 
 // Popover emulated button-powered dismiss - iPad
-- (void)popoverController:(UIPopoverController *)popoverController dismissWithClickedButtonIndex:(NSInteger)buttonIndex animated:(Boolean)animated {
+- (void)dismissPopoverController:(UIPopoverController *)popoverController withButtonIndex:(NSInteger)buttonIndex animated:(Boolean)animated {
   
   // Manually dismiss the popover
   [popoverController dismissPopoverAnimated:animated];
@@ -200,11 +241,30 @@ BOOL isOSAtLeast(NSString* version) {
 }
 
 // ActionSheet generic dismiss - iPhone
-- (void)actionSheet:(UIActionSheet *)actionSheet didDismissWithButtonIndex:(NSInteger)buttonIndex
-  {
+- (void)actionSheet:(UIActionSheet *)actionSheet didDismissWithButtonIndex:(NSInteger)buttonIndex {
     // Simulate a cancel click
     [self sendResultsFromPickerView:self.pickerView withButtonIndex:buttonIndex];
-  }
+}
+
+// View generic dismiss - iPhone (iOS8)
+- (void)dismissModalView:(UIView *)modalView withButtonIndex:(NSInteger)buttonIndex animated:(Boolean)animated {
+    
+    //Hide the view animated and then remove it.
+    [UIView animateWithDuration:0.5
+                          delay:0.0
+                        options: 0
+                     animations:^{
+                        CGRect viewFrame = self.viewController.view.frame;
+                        [self.modalView.subviews[0] setFrame: CGRectOffset(viewFrame, 0, viewFrame.size.height)];
+                        [self.modalView setBackgroundColor:[UIColor clearColor]];
+                     }
+                     completion:^(BOOL finished) {
+                        [self.modalView removeFromSuperview];
+                     }];
+  
+    // Retreive pickerView
+    [self sendResultsFromPickerView:self.pickerView withButtonIndex:buttonIndex];
+}
 
 //
 // Results
@@ -212,22 +272,21 @@ BOOL isOSAtLeast(NSString* version) {
 
 - (void)sendResultsFromPickerView:(UIPickerView *)pickerView withButtonIndex:(NSInteger)buttonIndex {
 
-  // Build returned result
-  NSInteger selectedRow = [pickerView selectedRowInComponent:0];
-  NSString *selectedValue = [[self.items objectAtIndex:selectedRow] objectForKey:@"value"];
-  
-  // Create Plugin Result
-  CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:selectedValue];
-
-  // Checking if cancel was clicked
-  if (buttonIndex == 0) {
-    // Call the Failure Javascript function
-    [self writeJavascript: [pluginResult toErrorCallbackString:self.callbackId]];
-  }else {
-    // Call the Success Javascript function
-    [self writeJavascript: [pluginResult toSuccessCallbackString:self.callbackId]];
-  }
-
+    // Build returned result
+    NSInteger selectedRow = [pickerView selectedRowInComponent:0];
+    NSString *selectedValue = [[self.items objectAtIndex:selectedRow] objectForKey:@"value"];
+    
+    // Create Plugin Result
+    CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:selectedValue];
+    
+    // Checking if cancel was clicked
+    if (buttonIndex == 0) {
+        // Call the Failure Javascript function
+        [self writeJavascript: [pluginResult toErrorCallbackString:self.callbackId]];
+    }else {
+        // Call the Success Javascript function
+        [self writeJavascript: [pluginResult toSuccessCallbackString:self.callbackId]];
+    }
 }
 
 //
