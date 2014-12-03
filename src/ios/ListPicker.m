@@ -1,16 +1,20 @@
 #import "ListPicker.h"
 #import <Cordova/CDVDebug.h>
 
-BOOL isOSAtLeast(NSString* version) {
-    return [[[UIDevice currentDevice] systemVersion] compare:version options:NSNumericSearch] != NSOrderedAscending;
-}
+#define IS_WIDESCREEN ( fabs( ( double )[ [ UIScreen mainScreen ] bounds ].size.height - ( double )568 ) < DBL_EPSILON )
+#define IS_IPAD UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad
+#define DEVICE_ORIENTATION [UIDevice currentDevice].orientation
+
+// UIInterfaceOrientationMask vs. UIInterfaceOrientation
+// A function like this isn't available in the API. It is derived from the enum def for
+// UIInterfaceOrientationMask.
+#define OrientationMaskSupportsOrientation(mask, orientation)   ((mask & (1 << orientation)) != 0)
 
 
 @implementation ListPicker
 
 @synthesize callbackId = _callbackId;
 @synthesize pickerView = _pickerView;
-@synthesize actionSheet = _actionSheet;
 @synthesize popoverController = _popoverController;
 @synthesize modalView = _modalView;
 @synthesize items = _items;
@@ -41,7 +45,7 @@ BOOL isOSAtLeast(NSString* version) {
 
     // Initialize the toolbar with Cancel and Done buttons and title
     UIToolbar *toolbar = [[UIToolbar alloc] initWithFrame: CGRectMake(0, 0, self.viewSize.width, 44)];
-    toolbar.barStyle = isOSAtLeast(@"7.0") ? UIBarStyleDefault : UIBarStyleBlackTranslucent;
+    toolbar.barStyle = (NSFoundationVersionNumber > NSFoundationVersionNumber_iOS_6_1) ? UIBarStyleDefault : UIBarStyleBlackTranslucent;
     NSMutableArray *buttons =[[NSMutableArray alloc] init];
     
     // Create Cancel button
@@ -53,7 +57,7 @@ BOOL isOSAtLeast(NSString* version) {
     [buttons addObject:flexSpace];
     UILabel *label =[[UILabel alloc] initWithFrame:CGRectMake(0, 0, 180, 30)];
     [label setTextAlignment:NSTextAlignmentCenter];
-    [label setTextColor: isOSAtLeast(@"7.0") ? [UIColor blackColor] : [UIColor whiteColor]];
+    [label setTextColor: (NSFoundationVersionNumber > NSFoundationVersionNumber_iOS_6_1) ? [UIColor blackColor] : [UIColor whiteColor]];
     [label setFont: [UIFont boldSystemFontOfSize:16]];
     [label setBackgroundColor:[UIColor clearColor]];
      label.text = title;
@@ -79,86 +83,60 @@ BOOL isOSAtLeast(NSString* version) {
    
     // Initialize the View that should conain the toolbar and picker
     UIView *view = [[UIView alloc] initWithFrame:CGRectMake(0, 0, self.viewSize.width, 260)];
-    if(isOSAtLeast(@"7.0")) {
+    if(NSFoundationVersionNumber > NSFoundationVersionNumber_iOS_6_1) {
       [view setBackgroundColor:[UIColor colorWithRed:0.97 green:0.97 blue:0.97 alpha:1.0]];
     }
     [view addSubview: toolbar];
+    
+    //ios7 picker draws a darkened alpha-only region on the first and last 8 pixels horizontally, but blurs the rest of its background.  To make the whole popup appear to be edge-to-edge, we have to add blurring to the remaining left and right edges.
+    if ( NSFoundationVersionNumber > NSFoundationVersionNumber_iOS_6_1 )
+    {
+        CGRect f = CGRectMake(0, toolbar.frame.origin.y, 8, view.frame.size.height - toolbar.frame.origin.y);
+        UIToolbar *leftEdge = [[UIToolbar alloc] initWithFrame:f];
+        f.origin.x = view.frame.size.width - 8;
+        UIToolbar *rightEdge = [[UIToolbar alloc] initWithFrame:f];
+        [view insertSubview:leftEdge atIndex:0];
+        [view insertSubview:rightEdge atIndex:0];
+    }
+    
     [view addSubview:self.pickerView];
   
-    // Check if device is iPad as we won't be able to use an ActionSheet there
-    if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) {
+    // Check if device is iPad to display popover
+    if ( IS_IPAD ) {
         return [self presentPopoverForView:view];
     } else {
-        if (isOSAtLeast(@"8.0"))  {
-            return [self presentModalViewForView:view];
-        } else {
-            return [self presentActionSheetForView:view];
-        }
+        return [self presentModalViewForView:view];
     }
 }
      
 -(void)presentModalViewForView:(UIView *)view {
 
-    CGRect viewFrame = self.viewController.view.frame;
-    [view setFrame: CGRectMake(0, viewFrame.size.height, self.viewSize.width, 260)];
+    [[NSNotificationCenter defaultCenter] addObserver:self 
+                                             selector:@selector(didRotate:) 
+                                                 name:UIApplicationWillChangeStatusBarOrientationNotification 
+                                               object:nil];
+
+    CGRect viewFrame = CGRectMake(0, 0, self.viewSize.width, self.viewSize.height);
+    [view setFrame: CGRectMake(0, viewFrame.size.height, viewFrame.size.width, 260)];
     
     // Create the modal view to display
-    self.modalView = [[UIView alloc] initWithFrame:viewFrame];
+    self.modalView = [[UIView alloc] initWithFrame: viewFrame];
     [self.modalView setBackgroundColor:[UIColor clearColor]];
     [self.modalView addSubview: view];
     
     // Add the modal view to current controller
-    [self.viewController.view addSubview:self.modalView];
-    [self.viewController.view bringSubviewToFront:self.modalView];
+    [self.webView.superview addSubview:self.modalView];
+    [self.webView.superview bringSubviewToFront:self.modalView];
     
     //Present the view animated
     [UIView animateWithDuration:0.5
                           delay:0.0
                         options: 0
                      animations:^{
-                         [self.modalView.subviews[0] setFrame: CGRectOffset(viewFrame, 0, viewFrame.size.height-260)];;
+                         [self.modalView.subviews[0] setFrame: CGRectOffset(viewFrame, 0, viewFrame.size.height - 260)];;
                          [self.modalView setBackgroundColor:[UIColor colorWithWhite:0.0 alpha:0.5]];
                      }
                      completion:nil];
-}
-
--(void)presentActionSheetForView:(UIView *)view {
-    
-    // Calculate actionSheet height
-    NSString *paddedSheetTitle = nil;
-    CGFloat sheetHeight = self.viewSize.height - 47;
-    if([self isViewPortrait]) {
-        paddedSheetTitle = @"\n\n\n"; // Looks hacky
-    } else {
-        if(isOSAtLeast(@"5.0")) {
-            sheetHeight = self.viewSize.width;
-        } else {
-            sheetHeight += 103;
-        }
-    }
-    
-    // ios7 picker draws a darkened alpha-only region on the first and last 8 pixels horizontally, but blurs the rest of its background. To make it whole popup appear to be edge-to-edge, we have to add blurring to the remaining left and right edges.
-    if(isOSAtLeast(@"7.0")) {
-        CGRect f = CGRectMake(0, self.pickerView.frame.origin.y, 8, self.pickerView.frame.size.height);
-        UIToolbar* leftEdge = [[UIToolbar alloc]initWithFrame: f];
-        f.origin.x = view.frame.size.width - 8;
-        UIToolbar* rightEdge = [[UIToolbar alloc]initWithFrame: f];
-        [view insertSubview: leftEdge atIndex: 0];
-        [view insertSubview: rightEdge atIndex: 0];
-    }
-    
-    // Create and style actionSheet, and append the view to it
-    self.actionSheet = [[UIActionSheet alloc] initWithTitle:paddedSheetTitle delegate:self cancelButtonTitle:nil destructiveButtonTitle:nil otherButtonTitles:nil];
-    [self.actionSheet setActionSheetStyle:UIActionSheetStyleBlackTranslucent];
-    [self.actionSheet addSubview:view];
-  
-    // Toggle ActionSheet
-    [self.actionSheet showInView:self.webView.superview];
-
-    // Use beginAnimations for a smoother popup animation, otherwise the UIActionSheet pops into view
-    [UIView beginAnimations:nil context:nil];
-    [self.actionSheet setBounds:CGRectMake(0, 0, self.viewSize.width, sheetHeight)];
-    [UIView commitAnimations];
 }
 
 -(void)presentPopoverForView:(UIView *)view {
@@ -167,9 +145,8 @@ BOOL isOSAtLeast(NSString* version) {
     UIViewController* popoverContent = [[UIViewController alloc] initWithNibName:nil bundle:nil];
     popoverContent.view = view;
 
-    // Resize the popover view shown
-    // in the current view to the view's size
-    popoverContent.contentSizeForViewInPopover = view.frame.size;
+    // Resize the popover to the view's size
+    popoverContent.preferredContentSize = view.frame.size;
 
     // Create a popover controller
     self.popoverController = [[UIPopoverController alloc] initWithContentViewController:popoverContent];
@@ -191,19 +168,31 @@ BOOL isOSAtLeast(NSString* version) {
 // Dismiss methods
 //
 
+- (void) didRotate:(NSNotification *)notification
+{
+    UIInterfaceOrientationMask supportedInterfaceOrientations = (UIInterfaceOrientationMask) [[UIApplication sharedApplication]
+                                                     supportedInterfaceOrientationsForWindow:
+                                                     [UIApplication sharedApplication].keyWindow];
+
+    if (OrientationMaskSupportsOrientation(supportedInterfaceOrientations, DEVICE_ORIENTATION)) {
+        // Check if device is iPad
+        if ( IS_IPAD ) {
+            [self dismissPopoverController:self.popoverController withButtonIndex:0 animated:YES];
+        } else {
+            [self dismissModalView:self.modalView withButtonIndex:0 animated:YES];
+        }
+    }
+}
+
 // Picker with toolbar dismissed with done
 - (IBAction)didDismissWithDoneButton:(id)sender {
 
     // Check if device is iPad
-    if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) {
+    if ( IS_IPAD ) {
         // Emulate a new delegate method
-        [self dismissPopoverController:self.popoverController withButtonIndex:0 animated:YES];
+        [self dismissPopoverController:self.popoverController withButtonIndex:1 animated:YES];
     } else {
-        if (isOSAtLeast(@"8.0"))  {
-            [self dismissModalView:self.modalView withButtonIndex:1 animated:YES];
-        } else {
-            [self.actionSheet dismissWithClickedButtonIndex:1 animated:YES];
-        }
+        [self dismissModalView:self.modalView withButtonIndex:1 animated:YES];
     }
 }
 
@@ -211,15 +200,11 @@ BOOL isOSAtLeast(NSString* version) {
 - (IBAction)didDismissWithCancelButton:(id)sender {
 
     // Check if device is iPad
-    if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) {
+    if ( IS_IPAD ) {
         // Emulate a new delegate method
         [self dismissPopoverController:self.popoverController withButtonIndex:0 animated:YES];
     } else {
-        if (isOSAtLeast(@"8.0"))  {
-            [self dismissModalView:self.modalView withButtonIndex:0 animated:YES];
-        } else {
-            [self.actionSheet dismissWithClickedButtonIndex:0 animated:YES];
-        }
+        [self dismissModalView:self.modalView withButtonIndex:0 animated:YES];
     }
 }
 
@@ -235,26 +220,24 @@ BOOL isOSAtLeast(NSString* version) {
   
   // Manually dismiss the popover
   [popoverController dismissPopoverAnimated:animated];
-  
-  // Retreive pickerView
-  [self sendResultsFromPickerView:self.pickerView withButtonIndex:buttonIndex];
-}
 
-// ActionSheet generic dismiss - iPhone
-- (void)actionSheet:(UIActionSheet *)actionSheet didDismissWithButtonIndex:(NSInteger)buttonIndex {
-    // Simulate a cancel click
-    [self sendResultsFromPickerView:self.pickerView withButtonIndex:buttonIndex];
+  // Send the result according to the button selected
+  [self sendResultsFromPickerView:self.pickerView withButtonIndex:buttonIndex];
 }
 
 // View generic dismiss - iPhone (iOS8)
 - (void)dismissModalView:(UIView *)modalView withButtonIndex:(NSInteger)buttonIndex animated:(Boolean)animated {
     
+    [[NSNotificationCenter defaultCenter] removeObserver:self
+                                                    name:UIApplicationWillChangeStatusBarOrientationNotification
+                                                  object:nil];
+		
     //Hide the view animated and then remove it.
     [UIView animateWithDuration:0.5
                           delay:0.0
                         options: 0
                      animations:^{
-                        CGRect viewFrame = self.viewController.view.frame;
+                        CGRect viewFrame = CGRectMake(0, 0, self.viewSize.width, self.viewSize.height);
                         [self.modalView.subviews[0] setFrame: CGRectOffset(viewFrame, 0, viewFrame.size.height)];
                         [self.modalView setBackgroundColor:[UIColor clearColor]];
                      }
@@ -277,22 +260,22 @@ BOOL isOSAtLeast(NSString* version) {
     NSString *selectedValue = [[self.items objectAtIndex:selectedRow] objectForKey:@"value"];
     
     // Create Plugin Result
-    CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:selectedValue];
-    
-    // Checking if cancel was clicked
+    CDVPluginResult* pluginResult;
     if (buttonIndex == 0) {
-        // Call the Failure Javascript function
-        [self writeJavascript: [pluginResult toErrorCallbackString:self.callbackId]];
+        // Create ERROR result if cancel was clicked
+        pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR];
     }else {
-        // Call the Success Javascript function
-        [self writeJavascript: [pluginResult toSuccessCallbackString:self.callbackId]];
+        // Create OK result otherwise
+        pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:selectedValue];
     }
+    
+    // Call appropriate javascript function
+    [self.commandDelegate sendPluginResult:pluginResult callbackId:self.callbackId];;
 }
 
 //
 // Picker delegate
 //
-
 
 // Listen picker selected row
 - (void)pickerView:(UIPickerView *)pickerView didSelectRow:(NSInteger)row inComponent:(NSInteger)component {
@@ -322,10 +305,29 @@ BOOL isOSAtLeast(NSString* version) {
 // Utilities
 //
 
-- (CGSize) viewSize {
-    if (![self isViewPortrait])
-        return CGSizeMake(480, 320);
-    return CGSizeMake(320, 480);
+- (CGSize)viewSize
+{
+    if ( IS_IPAD )
+    {
+        return CGSizeMake(320, 320);
+    }
+
+    #if defined(__IPHONE_8_0)
+    if (floor(NSFoundationVersionNumber) <= NSFoundationVersionNumber_iOS_7_1) {
+        //iOS 7.1 or earlier
+        if ( [self isViewPortrait] )
+            return CGSizeMake(320 , IS_WIDESCREEN ? 568 : 480);
+        return CGSizeMake(IS_WIDESCREEN ? 568 : 480, 320);
+
+    }else{
+        //iOS 8 or later
+        return [[UIScreen mainScreen] bounds].size;
+    }
+    #else
+        if ( [self isViewPortrait] )
+            return CGSizeMake(320 , IS_WIDESCREEN ? 568 : 480);
+        return CGSizeMake(IS_WIDESCREEN ? 568 : 480, 320);
+    #endif
 }
 
 - (BOOL) isViewPortrait {

@@ -25,6 +25,9 @@ Usage:
     window.plugins.listpicker.showPicker(config, 
         function(item) { 
             alert("You have selected " + item);
+        },
+        function() { 
+            alert("You have cancelled");
         }
     );
 
@@ -60,4 +63,8 @@ Licence:
 
 Credits:
 
-* iOS part inspired by [TimCinel](https://github.com/TimCinel/ActionSheetPicker) and [mgcrea](https://github.com/mgcrea/cordova-pickerview)
+* iOS part inspired by 
+  
+  [TimCinel](https://github.com/TimCinel/ActionSheetPicker) 
+  [mgcrea](https://github.com/mgcrea/cordova-pickerview)
+  [skywinder] (https://github.com/skywinder/ActionSheetPicker-3.0)
