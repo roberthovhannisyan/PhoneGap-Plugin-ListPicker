@@ -71,7 +71,7 @@
      [toolbar setItems:buttons animated:YES];
      
     // Initialize the picker
-    self.pickerView = [[UIPickerView alloc] initWithFrame:CGRectMake(0, 40.0f, self.viewSize.width, 216)];
+    self.pickerView = [[UIPickerView alloc] initWithFrame:CGRectMake(0, 22.0f, self.viewSize.width, 216)];
     self.pickerView.showsSelectionIndicator = YES;
     self.pickerView.delegate = self;
 
@@ -82,7 +82,7 @@
     }
    
     // Initialize the View that should conain the toolbar and picker
-    UIView *view = [[UIView alloc] initWithFrame:CGRectMake(0, 0, self.viewSize.width, 260)];
+    UIView *view = [[UIView alloc] initWithFrame:CGRectMake(0, self.viewSize.height - 260, self.viewSize.width, 260)];
     if(NSFoundationVersionNumber > NSFoundationVersionNumber_iOS_6_1) {
       [view setBackgroundColor:[UIColor colorWithRed:0.97 green:0.97 blue:0.97 alpha:1.0]];
     }
@@ -307,27 +307,28 @@
 
 - (CGSize)viewSize
 {
+    CGSize winSize = [UIApplication sharedApplication].keyWindow.rootViewController.view.frame.size;
     if ( IS_IPAD )
     {
         return CGSizeMake(320, 320);
     }
-
-    #if defined(__IPHONE_8_0)
+    
+#if defined(__IPHONE_8_0)
     if (floor(NSFoundationVersionNumber) <= NSFoundationVersionNumber_iOS_7_1) {
         //iOS 7.1 or earlier
         if ( [self isViewPortrait] )
-            return CGSizeMake(320 , IS_WIDESCREEN ? 568 : 480);
-        return CGSizeMake(IS_WIDESCREEN ? 568 : 480, 320);
-
+            return CGSizeMake(winSize.width , IS_WIDESCREEN ? 568 : winSize.height);
+        return CGSizeMake(IS_WIDESCREEN ? 568 : MAX(winSize.width, winSize.height), MIN(winSize.width , winSize.height));
+        
     }else{
         //iOS 8 or later
         return [[UIScreen mainScreen] bounds].size;
     }
-    #else
-        if ( [self isViewPortrait] )
-            return CGSizeMake(320 , IS_WIDESCREEN ? 568 : 480);
-        return CGSizeMake(IS_WIDESCREEN ? 568 : 480, 320);
-    #endif
+#else
+    if ( [self isViewPortrait] )
+        return CGSizeMake(320 , IS_WIDESCREEN ? 568 : 480);
+    return CGSizeMake(IS_WIDESCREEN ? 568 : MAX(winSize.width, winSize.height), MIN(winSize.width, winSize.height));
+#endif
 }
 
 - (BOOL) isViewPortrait {
