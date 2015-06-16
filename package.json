@@ -1,0 +1,39 @@
+{
+  "name": "am.armsoft.plugins.ListPicker",
+  "version": "2.2.0",
+  "description": "PhoneGap plugin to display a list picker dialog for Android and iOS.",
+  "cordova": {
+    "id": "am.armsoft.plugins.ListPicker",
+    "platforms": [
+      "ios",
+      "android"
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/roberthovhannisyan/PhoneGap-Plugin-ListPicker.git"
+  },
+  "keywords": [
+    "phonegap",
+    "android",
+    "ios",
+    "list",
+    "picker",
+    "dialog",
+    "ecosystem:cordova",
+    "cordova-ios",
+    "cordova-android"
+  ],
+  "engines": [
+    {
+      "name": "cordova",
+      "version": ">=3.0.0"
+    }
+  ],
+  "author": "Robert Hovhannisyan",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/roberthovhannisyan/PhoneGap-Plugin-ListPicker/issues"
+  },
+  "homepage": "https://github.com/roberthovhannisyan/PhoneGap-Plugin-ListPicker#readme"
+}
