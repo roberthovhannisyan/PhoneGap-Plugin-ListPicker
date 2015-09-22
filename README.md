@@ -3,7 +3,17 @@ ListPicker
 
 PhoneGap plugin to display a list picker dialog for Android and iOS.
 
-Usage:
+## Installation
+
+Use the following command to install the plugin from npmjs repository with with Cordova CLI (requires cordova 5.0+)
+```cordova plugin add cordova-plugin-listpicker```  
+
+## Installation - PhoneGap Build 
+
+Add the following line to config.xml: 
+```<gap:plugin name="cordova-plugin-listpicker" source="npm" />```
+
+## Usage
 
     // Prepare the picker configuration
     var config = {
@@ -31,13 +41,13 @@ Usage:
         }
     );
 
-Screen Shots: 
+## Screenshots
 
 ![ListPickerAndroid](screenshots/android.png "ListPickerAndroid")
 ![ListPickeriPhone](screenshots/iphone1.png "ListPickeriPhone")
 ![ListPickeriPad](screenshots/ipad1.png "ListPickeriPad")
 
-Licence:
+## Licence
 
     The MIT License
 
