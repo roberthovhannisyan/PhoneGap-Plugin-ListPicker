@@ -1,5 +1,4 @@
 #import "ListPicker.h"
-#import <Cordova/CDVDebug.h>
 
 #define IS_WIDESCREEN ( fabs( ( double )[ [ UIScreen mainScreen ] bounds ].size.height - ( double )568 ) < DBL_EPSILON )
 #define IS_IPAD UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad
