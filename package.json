@@ -1,6 +1,6 @@
 {
   "name": "cordova-plugin-listpicker",
-  "version": "2.2.1",
+  "version": "2.2.2",
   "description": "PhoneGap plugin to display a list picker dialog for Android and iOS.",
   "cordova": {
     "id": "cordova-plugin-listpicker",
