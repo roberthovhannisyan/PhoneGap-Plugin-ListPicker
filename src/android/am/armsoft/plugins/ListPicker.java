@@ -25,6 +25,11 @@ public class ListPicker extends CordovaPlugin {
      */
     public ListPicker() {
     }
+    
+    /**
+    *   Last picker opened
+    */
+    public AlertDialog open_dialog;
 
     /**
      * Executes the request and returns PluginResult.
@@ -38,6 +43,9 @@ public class ListPicker extends CordovaPlugin {
     public boolean execute(String action, JSONArray args, final CallbackContext callbackContext) throws JSONException {
         if (action.equals("showPicker")) {
             this.showPicker(args, callbackContext);
+            return true;
+        } else if(action.equals("closePickers")) {
+            this.closePickers(args, callbackContext);
             return true;
         }
         return false;
@@ -99,11 +107,20 @@ public class ListPicker extends CordovaPlugin {
                 
                 // Show alert dialog
                 AlertDialog alert = builder.create();
+                open_dialog = alert;
                 alert.getWindow().getAttributes().windowAnimations = android.R.style.Animation_Dialog;
                 alert.show(); 
             }
         };
         this.cordova.getActivity().runOnUiThread(runnable);
+    }
+
+    public void closePickers(final JSONArray data, final CallbackContext callbackContext) throws JSONException {
+    
+        if(this.open_dialog != null) {
+
+            this.open_dialog.dismiss();        
+        }
     }
 
 }
