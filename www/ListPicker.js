@@ -15,7 +15,7 @@ ListPicker.prototype.showPicker = function(options, callback, error_callback) {
     
     var config = {
         title: options.title || ' ',
-        selectedValue: options.selectedValue || '',
+        selectedValue: typeof(options.selectedValue) !== 'undefined' ? options.selectedValue : '',
         items: options.items || {},
         style: options.style || 'default',
         doneButtonLabel: options.doneButtonLabel || 'Done',
