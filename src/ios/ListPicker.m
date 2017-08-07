@@ -291,14 +291,31 @@
 }
 
 // Tell the picker the title for a given component
-- (NSString *)pickerView:(UIPickerView *)pickerView titleForRow:(NSInteger)row forComponent:(NSInteger)component {
-  return [[self.items objectAtIndex:row] objectForKey:@"text"];
-}
+
 
 // Tell the picker the width of each row for a given component
 - (CGFloat)pickerView:(UIPickerView *)pickerView widthForComponent:(NSInteger)component {
   return pickerView.frame.size.width - 30;
 }
+
+- (CGFloat)pickerView:(UIPickerView *)pickerView rowHeightForComponent:(NSInteger)component
+{
+    return 60;
+}
+
+- (UIView *)pickerView:(UIPickerView *)pickerView viewForRow:(NSInteger)row forComponent:(NSInteger)component reusingView:(UIView *)view{
+    //1. Create your view and set frame for the view
+    UILabel *pickerLabel = (UILabel *)view;
+    CGRect frame = CGRectMake(0,0,265,60);
+    pickerLabel = [[UILabel alloc] initWithFrame:frame];
+    [pickerLabel setTextAlignment:UITextAlignmentLeft];
+    [pickerLabel setBackgroundColor:[UIColor clearColor]];
+    [pickerLabel setFont:[UIFont boldSystemFontOfSize:16.0]];
+    [pickerLabel setNumberOfLines:0];
+    [pickerLabel setText:[[self.items objectAtIndex:row] objectForKey:@"text"]];
+    return pickerLabel;
+}
+
 
 //
 // Utilities
