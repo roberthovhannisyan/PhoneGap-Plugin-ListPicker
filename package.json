@@ -1,9 +1,9 @@
 {
-  "name": "cordova-plugin-listpicker",
+  "name": "cordova-plugin-listpicker-multiline-ios",
   "version": "2.2.2",
   "description": "PhoneGap plugin to display a list picker dialog for Android and iOS.",
   "cordova": {
-    "id": "cordova-plugin-listpicker",
+    "id": "cordova-plugin-listpicker-multiline-ios",
     "platforms": [
       "ios",
       "android"
@@ -11,7 +11,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/roberthovhannisyan/PhoneGap-Plugin-ListPicker.git"
+    "url": "git+https://github.com/pablorian/PhoneGap-Plugin-ListPicker.git"
   },
   "keywords": [
     "phonegap",
@@ -30,10 +30,10 @@
       "version": ">=3.0.0"
     }
   ],
-  "author": "Robert Hovhannisyan",
+  "author": "Robert Hovhannisyan. Modify by Pablo Rian support multiline IOS",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/roberthovhannisyan/PhoneGap-Plugin-ListPicker/issues"
+    "url": "https://github.com/pablorian/PhoneGap-Plugin-ListPicker/issues"
   },
-  "homepage": "https://github.com/roberthovhannisyan/PhoneGap-Plugin-ListPicker#readme"
+  "homepage": "https://github.com/pablorian/PhoneGap-Plugin-ListPicker#readme"
 }
