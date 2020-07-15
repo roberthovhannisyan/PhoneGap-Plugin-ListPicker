@@ -56,7 +56,6 @@
     [buttons addObject:flexSpace];
     UILabel *label =[[UILabel alloc] initWithFrame:CGRectMake(0, 0, 180, 30)];
     [label setTextAlignment:NSTextAlignmentCenter];
-    [label setTextColor: (NSFoundationVersionNumber > NSFoundationVersionNumber_iOS_6_1) ? [UIColor blackColor] : [UIColor whiteColor]];
     [label setFont: [UIFont boldSystemFontOfSize:16]];
     [label setBackgroundColor:[UIColor clearColor]];
      label.text = title;
@@ -83,20 +82,14 @@
     // Initialize the View that should conain the toolbar and picker
     UIView *view = [[UIView alloc] initWithFrame:CGRectMake(0, 0, self.viewSize.width, 260)];
     if(NSFoundationVersionNumber > NSFoundationVersionNumber_iOS_6_1) {
-      [view setBackgroundColor:[UIColor colorWithRed:0.97 green:0.97 blue:0.97 alpha:1.0]];
+        if (@available(iOS 13.0, *)) {
+            [view setBackgroundColor:[UIColor systemBackgroundColor]];
+        } else {
+            [view setBackgroundColor:[UIColor colorWithRed:0.97 green:0.97 blue:0.97 alpha:1.0]];
+        }
     }
+
     [view addSubview: toolbar];
-    
-    //ios7 picker draws a darkened alpha-only region on the first and last 8 pixels horizontally, but blurs the rest of its background.  To make the whole popup appear to be edge-to-edge, we have to add blurring to the remaining left and right edges.
-    if ( NSFoundationVersionNumber > NSFoundationVersionNumber_iOS_6_1 )
-    {
-        CGRect f = CGRectMake(0, toolbar.frame.origin.y, 8, view.frame.size.height - toolbar.frame.origin.y);
-        UIToolbar *leftEdge = [[UIToolbar alloc] initWithFrame:f];
-        f.origin.x = view.frame.size.width - 8;
-        UIToolbar *rightEdge = [[UIToolbar alloc] initWithFrame:f];
-        [view insertSubview:leftEdge atIndex:0];
-        [view insertSubview:rightEdge atIndex:0];
-    }
     
     [view addSubview:self.pickerView];
   
